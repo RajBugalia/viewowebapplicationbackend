@@ -14,7 +14,7 @@ RUN ./gradlew build -x test
 # Create the final image
 FROM eclipse-temurin:17-jre-alpine
 VOLUME /tmp
-COPY --from=build /workspace/app/build/libs/*.jar app.jar
+COPY --from=build /workspace/app/build/libs/backend-0.0.1-SNAPSHOT.jar app.jar
 
 # Run the jar file 
 ENTRYPOINT ["java","-jar","/app.jar"]
