@@ -26,9 +26,21 @@ class DatabaseConfig {
     fun dataSource(): DataSource {
         val basicDataSource = HikariDataSource()
         
-        // DigitalOcean / Heroku injects DATABASE_URL as postgres://user:pass@host:port/db
-        if (databaseUrl.startsWith("postgres://")) {
-            val dbUri = URI(databaseUrl)
+        // DigitalOcean injects database URLs with prefixes like DEV_DB_790496_DATABASE_URL
+        val env = System.getenv()
+        var doDatabaseUrl = env["DATABASE_URL"]
+        
+        if (doDatabaseUrl == null || !doDatabaseUrl.startsWith("postgres")) {
+            for ((key, value) in env) {
+                if (key.endsWith("_DATABASE_URL") && value.startsWith("postgres")) {
+                    doDatabaseUrl = value
+                    break
+                }
+            }
+        }
+        
+        if (doDatabaseUrl != null && doDatabaseUrl.startsWith("postgres")) {
+            val dbUri = URI(doDatabaseUrl)
             val username = dbUri.userInfo.split(":")[0]
             val password = dbUri.userInfo.split(":")[1]
             
