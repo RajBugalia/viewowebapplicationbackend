@@ -135,7 +135,9 @@ class ScreenApiController(
     fun debugDb(): ResponseEntity<*> {
         return try {
             val tables = jdbcTemplate.queryForList("SELECT table_schema, table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE' AND table_schema NOT IN ('pg_catalog', 'information_schema');")
-            ResponseEntity.ok(mapOf("tables" to tables))
+            val currentUser = jdbcTemplate.queryForObject("SELECT current_user", String::class.java)
+            val currentSchema = jdbcTemplate.queryForObject("SELECT current_schema", String::class.java)
+            ResponseEntity.ok(mapOf("tables" to tables, "currentUser" to currentUser, "currentSchema" to currentSchema))
         } catch (e: Exception) {
             ResponseEntity.status(500).body(mapOf("error" to e.message))
         }
@@ -144,6 +146,15 @@ class ScreenApiController(
     @PostMapping("/init-db")
     fun initDb(): ResponseEntity<*> {
         return try {
+            val currentUser = jdbcTemplate.queryForObject("SELECT current_user", String::class.java)
+            try {
+                jdbcTemplate.execute("CREATE SCHEMA IF NOT EXISTS $currentUser")
+                jdbcTemplate.execute("SET search_path TO $currentUser")
+            } catch (e: Exception) {
+                // If we can't create it, we just ignore and hope we can write to whatever is current
+                println("Could not create schema: ${e.message}")
+            }
+
             val statements = listOf(
                 """CREATE TABLE IF NOT EXISTS users (
                     id BIGSERIAL PRIMARY KEY,
