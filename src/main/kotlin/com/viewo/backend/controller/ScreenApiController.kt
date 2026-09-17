@@ -218,7 +218,9 @@ class ScreenApiController(
             ResponseEntity.ok(mapOf("status" to "success", "message" to "Database initialized manually!"))
         } catch (e: Exception) {
             e.printStackTrace()
-            ResponseEntity.status(500).body(mapOf("status" to "error", "error" to e.message))
+            val causeMessage = e.cause?.message
+            val rootCauseMessage = e.cause?.cause?.message
+            ResponseEntity.status(500).body(mapOf("status" to "error", "error" to e.message, "cause" to causeMessage, "rootCause" to rootCauseMessage))
         }
     }
 
