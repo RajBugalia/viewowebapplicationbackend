@@ -51,8 +51,10 @@ class DatabaseConfig {
             basicDataSource.username = username
             basicDataSource.password = password
             
-            // Bypass Postgres 15+ public schema block by defaulting to the user's isolated schema
-            basicDataSource.schema = username
+            // Bypass Postgres 15+ public schema block by creating an isolated schema and setting search_path
+            // We use connectionInitSql so it runs on every new connection before Hibernate uses it.
+            // Double quotes are REQUIRED because DO usernames contain dashes (e.g. dev-db-123)
+            basicDataSource.connectionInitSql = "CREATE SCHEMA IF NOT EXISTS \"$username\"; SET search_path TO \"$username\";"
         } else {
             // Fallback to local development credentials
             basicDataSource.jdbcUrl = localUrl
