@@ -7,6 +7,7 @@ import com.viewo.backend.repository.CampaignRepository
 import com.viewo.backend.repository.MediaRepository
 import com.viewo.backend.repository.ProofOfPlayRepository
 import org.springframework.http.ResponseEntity
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.web.bind.annotation.*
 import java.time.Instant
 import java.time.LocalDateTime
@@ -18,7 +19,8 @@ class ScreenApiController(
     private val screenRepository: ScreenRepository,
     private val campaignRepository: CampaignRepository,
     private val mediaRepository: MediaRepository,
-    private val proofOfPlayRepository: ProofOfPlayRepository
+    private val proofOfPlayRepository: ProofOfPlayRepository,
+    private val jdbcTemplate: JdbcTemplate
 ) {
     data class RegisterRequest(val pairingCode: String, val screenId: Long? = null)
 
@@ -127,6 +129,16 @@ class ScreenApiController(
 
         proofOfPlayRepository.saveAll(entitiesToSave)
         return ResponseEntity.ok(mapOf("status" to "ok", "saved" to entitiesToSave.size))
+    }
+
+    @GetMapping("/debug-db")
+    fun debugDb(): ResponseEntity<*> {
+        return try {
+            val tables = jdbcTemplate.queryForList("SELECT tablename FROM pg_tables WHERE schemaname = 'public';", String::class.java)
+            ResponseEntity.ok(mapOf("tables" to tables))
+        } catch (e: Exception) {
+            ResponseEntity.status(500).body(mapOf("error" to e.message))
+        }
     }
 
     @ExceptionHandler(Exception::class)
