@@ -59,6 +59,7 @@ class SecurityConfig(
                     .requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/ws/**").permitAll()
                     .requestMatchers("/api/tv/**").permitAll()
+                    .requestMatchers("/error").permitAll()
                     .requestMatchers("/api/master/**").hasRole("MASTER")
                     .requestMatchers("/api/admin/**", "/api/playlists/**", "/api/campaigns/**").hasAnyRole("ADMIN", "MASTER")
                     .requestMatchers("/api/media/**").hasAnyRole("ADMIN", "MASTER")
