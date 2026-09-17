@@ -50,6 +50,9 @@ class DatabaseConfig {
             basicDataSource.jdbcUrl = dbUrl
             basicDataSource.username = username
             basicDataSource.password = password
+            
+            // Bypass Postgres 15+ public schema block by defaulting to the user's isolated schema
+            basicDataSource.schema = username
         } else {
             // Fallback to local development credentials
             basicDataSource.jdbcUrl = localUrl

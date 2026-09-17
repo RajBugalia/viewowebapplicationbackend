@@ -143,7 +143,7 @@ class ScreenApiController(
         }
     }
 
-    @PostMapping("/init-db")
+    @org.springframework.web.bind.annotation.RequestMapping(value = ["/init-db"], method = [org.springframework.web.bind.annotation.RequestMethod.GET, org.springframework.web.bind.annotation.RequestMethod.POST])
     fun initDb(): ResponseEntity<*> {
         return try {
             val currentUser = jdbcTemplate.queryForObject("SELECT current_user", String::class.java)
