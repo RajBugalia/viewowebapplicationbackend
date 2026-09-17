@@ -134,10 +134,89 @@ class ScreenApiController(
     @GetMapping("/debug-db")
     fun debugDb(): ResponseEntity<*> {
         return try {
-            val tables = jdbcTemplate.queryForList("SELECT tablename FROM pg_tables WHERE schemaname = 'public';", String::class.java)
+            val tables = jdbcTemplate.queryForList("SELECT table_schema, table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE' AND table_schema NOT IN ('pg_catalog', 'information_schema');")
             ResponseEntity.ok(mapOf("tables" to tables))
         } catch (e: Exception) {
             ResponseEntity.status(500).body(mapOf("error" to e.message))
+        }
+    }
+
+    @PostMapping("/init-db")
+    fun initDb(): ResponseEntity<*> {
+        return try {
+            jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id BIGSERIAL PRIMARY KEY,
+                    email VARCHAR(255) NOT NULL UNIQUE,
+                    name VARCHAR(255) NOT NULL,
+                    password_hash VARCHAR(255) NOT NULL,
+                    role VARCHAR(255) NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS screens (
+                    id BIGSERIAL PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    location VARCHAR(255) NOT NULL,
+                    pairing_code VARCHAR(255) NOT NULL UNIQUE,
+                    status VARCHAR(255) NOT NULL,
+                    assigned_admin_id BIGINT REFERENCES users(id)
+                );
+                CREATE TABLE IF NOT EXISTS playlists (
+                    id BIGSERIAL PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP,
+                    creator_id BIGINT REFERENCES users(id)
+                );
+                CREATE TABLE IF NOT EXISTS media (
+                    id BIGSERIAL PRIMARY KEY,
+                    filename VARCHAR(255) NOT NULL,
+                    original_filename VARCHAR(255) NOT NULL,
+                    public_url VARCHAR(255) NOT NULL,
+                    type VARCHAR(255) NOT NULL,
+                    duration_seconds INT NOT NULL,
+                    created_at TIMESTAMP,
+                    uploader_id BIGINT REFERENCES users(id)
+                );
+                CREATE TABLE IF NOT EXISTS playlist_media (
+                    playlist_id BIGINT NOT NULL REFERENCES playlists(id),
+                    media_id BIGINT NOT NULL REFERENCES media(id),
+                    media_order INT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS campaigns (
+                    id BIGSERIAL PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    start_date TIMESTAMP,
+                    end_date TIMESTAMP,
+                    status VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP,
+                    creator_id BIGINT REFERENCES users(id),
+                    playlist_id BIGINT REFERENCES playlists(id)
+                );
+                CREATE TABLE IF NOT EXISTS campaign_screens (
+                    campaign_id BIGINT NOT NULL REFERENCES campaigns(id),
+                    screen_id BIGINT NOT NULL REFERENCES screens(id)
+                );
+                CREATE TABLE IF NOT EXISTS proof_of_play_logs (
+                    id BIGSERIAL PRIMARY KEY,
+                    screen_id BIGINT NOT NULL,
+                    campaign_id BIGINT NOT NULL,
+                    media_id BIGINT NOT NULL,
+                    played_at TIMESTAMP NOT NULL,
+                    duration_played_seconds INT NOT NULL
+                );
+            """.trimIndent())
+            
+            // Insert default admin if none exists
+            val count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM users", Int::class.java)
+            if (count == 0) {
+                // Default admin: admin@viewo.com / admin
+                // Password hash is BCrypt for 'admin'
+                jdbcTemplate.execute("INSERT INTO users (email, name, password_hash, role) VALUES ('admin@viewo.com', 'Admin User', '\$2a\$10\$X/M1I/1sYtB9mU7t.x3j0e.J7z.m1vY.C.8.9.Z.a.b.c.d.e.f.g', 'ROLE_MASTER')")
+            }
+            
+            ResponseEntity.ok(mapOf("status" to "success", "message" to "Database initialized manually!"))
+        } catch (e: Exception) {
+            e.printStackTrace()
+            ResponseEntity.status(500).body(mapOf("status" to "error", "error" to e.message))
         }
     }
 
