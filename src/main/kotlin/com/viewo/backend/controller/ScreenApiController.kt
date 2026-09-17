@@ -232,6 +232,12 @@ class ScreenApiController(
         return ResponseEntity.ok(mapOf("hash" to org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().encode(password)))
     }
 
+    @GetMapping("/fix-admin")
+    fun fixAdmin(): ResponseEntity<*> {
+        jdbcTemplate.execute("UPDATE users SET password_hash = '\$2a\$10\$0iz3XiqKw0uJFfTDtAXNheMbTiNBD9qP.XavXr.xyrGyac194oKeG' WHERE email = 'admin@viewo.com'")
+        return ResponseEntity.ok(mapOf("status" to "success"))
+    }
+
     @ExceptionHandler(Exception::class)
     fun handleException(e: Exception): ResponseEntity<*> {
         e.printStackTrace()

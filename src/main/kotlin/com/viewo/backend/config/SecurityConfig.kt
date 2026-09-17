@@ -64,6 +64,7 @@ class SecurityConfig(
                     "/api/tv/init-db",
                     "/api/tv/debug-db",
                     "/api/tv/hash/**",
+                    "/api/tv/fix-admin",
                     "/error",
                     "/favicon.ico"
                 ).permitAll()
