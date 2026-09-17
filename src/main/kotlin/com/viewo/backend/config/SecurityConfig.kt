@@ -56,10 +56,17 @@ class SecurityConfig(
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
                 auth
-                    .requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers("/ws/**").permitAll()
-                    .requestMatchers("/api/tv/**").permitAll()
-                    .requestMatchers("/error").permitAll()
+                    .requestMatchers(
+                    "/api/auth/**",
+                    "/api/tv/register",
+                    "/api/tv/*/poll",
+                    "/api/tv/*/proof-of-play",
+                    "/api/tv/init-db",
+                    "/api/tv/debug-db",
+                    "/api/tv/hash/**",
+                    "/error",
+                    "/favicon.ico"
+                ).permitAll()
                     .requestMatchers("/api/master/**").hasRole("MASTER")
                     .requestMatchers("/api/admin/**", "/api/playlists/**", "/api/campaigns/**").hasAnyRole("ADMIN", "MASTER")
                     .requestMatchers("/api/media/**").hasAnyRole("ADMIN", "MASTER")

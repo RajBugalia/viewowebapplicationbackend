@@ -215,7 +215,7 @@ class ScreenApiController(
             // Insert default admin if none exists
             val count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM users", Int::class.java)
             if (count == 0) {
-                jdbcTemplate.execute("INSERT INTO users (email, name, password_hash, role) VALUES ('admin@viewo.com', 'Admin User', '\$2a\$10\$X/M1I/1sYtB9mU7t.x3j0e.J7z.m1vY.C.8.9.Z.a.b.c.d.e.f.g', 'ROLE_MASTER')")
+                jdbcTemplate.execute("INSERT INTO users (email, name, password_hash, role) VALUES ('admin@viewo.com', 'Admin User', '\$2a\$10\$0iz3XiqKw0uJFfTDtAXNheMbTiNBD9qP.XavXr.xyrGyac194oKeG', 'ROLE_MASTER')")
             }
             
             ResponseEntity.ok(mapOf("status" to "success", "message" to "Database initialized manually!"))
@@ -225,6 +225,11 @@ class ScreenApiController(
             val rootCauseMessage = e.cause?.cause?.message
             ResponseEntity.status(500).body(mapOf("status" to "error", "error" to e.message, "cause" to causeMessage, "rootCause" to rootCauseMessage))
         }
+    }
+
+    @GetMapping("/hash/{password}")
+    fun hashPassword(@PathVariable password: String): ResponseEntity<*> {
+        return ResponseEntity.ok(mapOf("hash" to org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().encode(password)))
     }
 
     @ExceptionHandler(Exception::class)
