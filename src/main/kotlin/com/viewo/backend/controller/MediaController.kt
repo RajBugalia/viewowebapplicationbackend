@@ -120,6 +120,8 @@ class MediaController(
                 .key(key)
                 .build())
         } catch (e: Exception) {
+            println("FAILED to delete from DO Spaces: ${e.message}")
+            e.printStackTrace()
             // Ignore if DO Spaces fails, still delete from DB
         }
 
