@@ -128,4 +128,15 @@ class ScreenApiController(
         proofOfPlayRepository.saveAll(entitiesToSave)
         return ResponseEntity.ok(mapOf("status" to "ok", "saved" to entitiesToSave.size))
     }
+
+    @ExceptionHandler(Exception::class)
+    fun handleException(e: Exception): ResponseEntity<*> {
+        e.printStackTrace()
+        return ResponseEntity.status(500).body(mapOf(
+            "error" to e.javaClass.simpleName,
+            "message" to e.message,
+            "cause" to e.cause?.message,
+            "stackTrace" to e.stackTraceToString()
+        ))
+    }
 }
