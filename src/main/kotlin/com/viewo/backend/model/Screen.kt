@@ -8,14 +8,14 @@ data class Screen(
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
     
-    val name: String,
+    var name: String,
     
-    val location: String,
+    var location: String,
     
     @Column(unique = true, nullable = false)
-    val pairingCode: String,
+    var pairingCode: String,
     
-    val status: String = "OFFLINE", // ONLINE or OFFLINE
+    var status: String = "OFFLINE", // ONLINE or OFFLINE
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_admin_id")

@@ -76,12 +76,10 @@ class MasterController(
         }
         val existingScreen = screens.first()
 
-        val updatedScreen = existingScreen.copy(
-            status = "ONLINE",
-            assignedAdmin = adminUser
-        )
+        existingScreen.status = "ONLINE"
+        existingScreen.assignedAdmin = adminUser
 
-        screenRepository.save(updatedScreen)
+        screenRepository.save(existingScreen)
 
         return ResponseEntity.ok(mapOf("message" to "Screen paired and assigned to Admin successfully!"))
     }
@@ -136,7 +134,8 @@ class MasterController(
         // Unassign any screens from this admin
         val screens = screenRepository.findByAssignedAdminId(id)
         for (screen in screens) {
-            screenRepository.save(screen.copy(assignedAdmin = null))
+            screen.assignedAdmin = null
+            screenRepository.save(screen)
         }
         
         // Attempt to delete user. This may fail if they uploaded media.

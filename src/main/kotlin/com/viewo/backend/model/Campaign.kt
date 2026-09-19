@@ -19,7 +19,7 @@ data class Campaign(
     @JoinColumn(name = "playlist_id")
     val playlist: Playlist,
     
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(
         name = "campaign_screens",
         joinColumns = [JoinColumn(name = "campaign_id")],

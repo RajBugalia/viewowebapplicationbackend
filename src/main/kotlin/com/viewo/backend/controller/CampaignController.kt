@@ -53,16 +53,21 @@ class CampaignController(
         val playlist = playlistRepository.findById(request.playlistId).orElse(null)
             ?: return ResponseEntity.badRequest().body(mapOf("error" to "Playlist not found"))
             
-        val screens = screenRepository.findAllById(request.targetScreenIds)
+        val screens = screenRepository.findAllById(request.targetScreenIds).toMutableList()
+        if (screens.isEmpty()) {
+            return ResponseEntity.badRequest().body(mapOf("error" to "No valid screens selected or found"))
+        }
         
         val campaign = Campaign(
             name = request.name,
             startDate = LocalDateTime.parse(request.startDate),
             endDate = LocalDateTime.parse(request.endDate),
             playlist = playlist,
-            targetScreens = screens,
             creator = user
         )
+        campaign.targetScreens.addAll(screens)
+        
+        println("Saving campaign with ${campaign.targetScreens.size} screens")
         
         val saved = campaignRepository.save(campaign)
         

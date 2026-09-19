@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import org.springframework.transaction.annotation.Transactional
 
 @RestController
 @RequestMapping("/api/tv")
@@ -34,7 +35,8 @@ class ScreenApiController(
         if (screen != null) {
             // Update existing screen's pairing code if it is offline/unpaired
             if (screen.status == "OFFLINE") {
-                val updatedScreen = screenRepository.save(screen.copy(pairingCode = code))
+                screen.pairingCode = code
+                val updatedScreen = screenRepository.save(screen)
                 return ResponseEntity.ok(mapOf(
                     "pairingCode" to updatedScreen.pairingCode,
                     "screenId" to updatedScreen.id
@@ -63,7 +65,39 @@ class ScreenApiController(
         }
     }
 
+    @GetMapping("/debug-relations")
+    fun debugRelations(): ResponseEntity<*> {
+        val list = jdbcTemplate.queryForList("SELECT * FROM campaign_screens")
+        return ResponseEntity.ok(list)
+    }
+
+    @GetMapping("/debug-screens")
+    fun debugScreens(): ResponseEntity<*> {
+        val list = jdbcTemplate.queryForList("SELECT id, pairing_code, status FROM screens")
+        return ResponseEntity.ok(list)
+    }
+
+    @GetMapping("/debug-campaigns")
+    @Transactional
+    fun debugCampaigns(): ResponseEntity<*> {
+        val campaigns = campaignRepository.findAll()
+        val now = LocalDateTime.now()
+        val res = campaigns.map { c ->
+            mapOf(
+                "id" to c.id,
+                "name" to c.name,
+                "startDate" to c.startDate.toString(),
+                "endDate" to c.endDate.toString(),
+                "now" to now.toString(),
+                "isActive" to (now >= c.startDate && now <= c.endDate),
+                "targetScreenIds" to c.targetScreens.map { it.id }
+            )
+        }
+        return ResponseEntity.ok(res)
+    }
+
     // 2. Poll for campaign updates
+    @Transactional
     @GetMapping("/{screenId}/poll")
     fun pollScreen(@PathVariable screenId: Long): ResponseEntity<*> {
         val screen = screenRepository.findById(screenId).orElse(null)
@@ -79,7 +113,7 @@ class ScreenApiController(
         val campaigns = campaignRepository.findAll()
         val activeCampaign = campaigns.firstOrNull { campaign ->
             campaign.targetScreens.any { it.id == screen.id } &&
-            now.isAfter(campaign.startDate) && now.isBefore(campaign.endDate)
+            now >= campaign.startDate && now <= campaign.endDate
         }
 
         if (activeCampaign == null) {
