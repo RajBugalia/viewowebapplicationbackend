@@ -33,8 +33,8 @@ class ScreenApiController(
         var screen = request.screenId?.let { screenRepository.findById(it).orElse(null) }
         
         if (screen != null) {
-            // Update existing screen's pairing code if it is offline/unpaired
-            if (screen.status == "OFFLINE") {
+            // Update existing screen's pairing code if it is unpaired
+            if (screen.assignedAdmin == null) {
                 screen.pairingCode = code
                 val updatedScreen = screenRepository.save(screen)
                 return ResponseEntity.ok(mapOf(
@@ -103,8 +103,15 @@ class ScreenApiController(
         val screen = screenRepository.findById(screenId).orElse(null)
             ?: return ResponseEntity.notFound().build<Any>()
 
-        // Check if paired (i.e. status is ONLINE and assignedAdmin is not null)
-        if (screen.status == "OFFLINE" || screen.assignedAdmin == null) {
+        // Update heartbeat
+        screen.lastPingAt = LocalDateTime.now()
+        if (screen.assignedAdmin != null && screen.status == "OFFLINE") {
+            screen.status = "ONLINE"
+        }
+        screenRepository.save(screen)
+
+        // Check if unpaired
+        if (screen.assignedAdmin == null) {
             return ResponseEntity.ok(mapOf("status" to "UNPAIRED", "activeCampaign" to null))
         }
 
@@ -149,6 +156,13 @@ class ScreenApiController(
     fun uploadProofOfPlay(@PathVariable screenId: Long, @RequestBody logs: List<Map<String, Any>>): ResponseEntity<*> {
         val screen = screenRepository.findById(screenId).orElse(null)
             ?: return ResponseEntity.notFound().build<Any>()
+
+        // Update heartbeat
+        screen.lastPingAt = LocalDateTime.now()
+        if (screen.assignedAdmin != null && screen.status == "OFFLINE") {
+            screen.status = "ONLINE"
+        }
+        screenRepository.save(screen)
 
         val entitiesToSave = mutableListOf<ProofOfPlayLog>()
         for (log in logs) {

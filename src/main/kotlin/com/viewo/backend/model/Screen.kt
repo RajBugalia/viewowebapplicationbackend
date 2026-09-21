@@ -1,6 +1,7 @@
 package com.viewo.backend.model
 
 import jakarta.persistence.*
+import java.time.LocalDateTime
 
 @Entity
 @Table(name = "screens")
@@ -19,5 +20,7 @@ data class Screen(
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_admin_id")
-    var assignedAdmin: User? = null
+    var assignedAdmin: User? = null,
+    
+    var lastPingAt: LocalDateTime? = null
 )
