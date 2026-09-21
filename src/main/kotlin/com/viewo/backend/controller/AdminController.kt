@@ -9,13 +9,16 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.time.format.DateTimeFormatter
+import com.viewo.backend.model.Notification
+import com.viewo.backend.repository.NotificationRepository
 
 @RestController
 @RequestMapping("/api/admin")
 class AdminController(
     private val screenRepository: ScreenRepository,
     private val proofOfPlayRepository: ProofOfPlayRepository,
-    private val campaignRepository: com.viewo.backend.repository.CampaignRepository
+    private val campaignRepository: com.viewo.backend.repository.CampaignRepository,
+    private val notificationRepository: NotificationRepository
 ) {
     @GetMapping("/dashboard")
     fun getAdminDashboard(): ResponseEntity<*> {
@@ -65,8 +68,8 @@ class AdminController(
         return ResponseEntity.ok(response)
     }
 
-    @org.springframework.web.bind.annotation.DeleteMapping("/screens/{id}")
-    fun deleteScreen(@org.springframework.web.bind.annotation.PathVariable id: Long): ResponseEntity<*> {
+    @org.springframework.web.bind.annotation.PutMapping("/screens/{id}")
+    fun updateScreen(@org.springframework.web.bind.annotation.PathVariable id: Long, @org.springframework.web.bind.annotation.RequestBody request: Map<String, String>): ResponseEntity<*> {
         val authentication = SecurityContextHolder.getContext().authentication
             ?: return ResponseEntity.status(401).body(mapOf("error" to "Unauthorized"))
             
@@ -81,19 +84,23 @@ class AdminController(
             return ResponseEntity.status(403).body(mapOf("error" to "Forbidden: Screen does not belong to you"))
         }
         
-        // Delete associated logs
-        proofOfPlayRepository.deleteByScreenId(id)
-        
-        // Remove from campaigns
-        val campaigns = campaignRepository.findAll()
-        for (campaign in campaigns) {
-            if (campaign.targetScreens.any { it.id == id }) {
-                campaign.targetScreens.removeIf { it.id == id }
-                campaignRepository.save(campaign)
-            }
+        val newName = request["name"]
+        if (newName.isNullOrBlank()) {
+            return ResponseEntity.badRequest().body(mapOf("error" to "Name cannot be empty"))
         }
-        
-        screenRepository.delete(screen)
-        return ResponseEntity.ok(mapOf("message" to "Screen deleted successfully"))
+
+        screen.name = newName
+        screenRepository.save(screen)
+
+        // Notification to Admin
+        notificationRepository.save(Notification(
+            message = "Screen name updated to '${screen.name}'.",
+            type = "INFO",
+            targetRole = "ROLE_ADMIN",
+            targetUser = screen.assignedAdmin,
+            screenId = id
+        ))
+
+        return ResponseEntity.ok(mapOf("message" to "Screen updated successfully", "name" to screen.name))
     }
 }

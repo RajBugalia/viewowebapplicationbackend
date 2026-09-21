@@ -92,7 +92,7 @@ class MediaController(
         val media = mediaRepository.findById(id).orElse(null)
             ?: return ResponseEntity.notFound().build<Any>()
 
-        if (media.uploader.id != userDetails.id) {
+        if (media.uploader?.id != userDetails.id) {
             // Check if master admin? Actually only uploader can delete for now
             val user = userRepository.findById(userDetails.id).orElseThrow()
             if (user.role.name != "ROLE_MASTER") {

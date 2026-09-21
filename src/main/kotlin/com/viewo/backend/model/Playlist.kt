@@ -8,7 +8,7 @@ data class Playlist(
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
     
-    val name: String,
+    var name: String,
     
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

@@ -105,4 +105,27 @@ class CampaignController(
         campaignRepository.delete(campaign)
         return ResponseEntity.ok(mapOf("message" to "Campaign deleted successfully"))
     }
+
+    @PutMapping("/{id}")
+    fun updateCampaign(@PathVariable id: Long, @RequestBody request: Map<String, String>, principal: Principal): ResponseEntity<*> {
+        val user = userRepository.findByEmail(principal.name).orElse(null)
+            ?: return ResponseEntity.status(401).body(mapOf("error" to "Unauthorized"))
+
+        val campaign = campaignRepository.findById(id).orElse(null)
+            ?: return ResponseEntity.notFound().build<Any>()
+
+        if (campaign.creator?.id != user.id) {
+            return ResponseEntity.status(403).body(mapOf("error" to "Forbidden: Campaign does not belong to you"))
+        }
+
+        val newName = request["name"]
+        if (newName.isNullOrBlank()) {
+            return ResponseEntity.badRequest().body(mapOf("error" to "Name cannot be empty"))
+        }
+
+        campaign.name = newName
+        campaignRepository.save(campaign)
+
+        return ResponseEntity.ok(mapOf("message" to "Campaign updated successfully", "name" to campaign.name))
+    }
 }

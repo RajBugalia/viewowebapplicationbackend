@@ -8,6 +8,10 @@ import org.springframework.web.bind.annotation.*
 
 import com.viewo.backend.repository.CampaignRepository
 import com.viewo.backend.repository.ProofOfPlayRepository
+import com.viewo.backend.model.Notification
+import com.viewo.backend.repository.NotificationRepository
+import com.viewo.backend.repository.PlaylistRepository
+import com.viewo.backend.repository.MediaRepository
 
 data class PairScreenRequest(val pairingCode: String, val adminEmail: String)
 
@@ -17,7 +21,10 @@ class MasterController(
     private val screenRepository: ScreenRepository,
     private val userRepository: UserRepository,
     private val campaignRepository: CampaignRepository,
-    private val proofOfPlayRepository: ProofOfPlayRepository
+    private val proofOfPlayRepository: ProofOfPlayRepository,
+    private val notificationRepository: NotificationRepository,
+    private val playlistRepository: PlaylistRepository,
+    private val mediaRepository: MediaRepository
 ) {
     @GetMapping("/stats")
     fun getMasterStats(): ResponseEntity<*> {
@@ -81,6 +88,23 @@ class MasterController(
 
         screenRepository.save(existingScreen)
 
+        // Create notification for Admin
+        notificationRepository.save(Notification(
+            message = "A new screen '${existingScreen.name}' has been paired to your account.",
+            type = "INFO",
+            targetRole = "ROLE_ADMIN",
+            targetUser = adminUser,
+            screenId = existingScreen.id
+        ))
+
+        // Create notification for Master
+        notificationRepository.save(Notification(
+            message = "Screen '${existingScreen.name}' was successfully paired and assigned to ${adminUser.email}.",
+            type = "SUCCESS",
+            targetRole = "ROLE_MASTER",
+            screenId = existingScreen.id
+        ))
+
         return ResponseEntity.ok(mapOf("message" to "Screen paired and assigned to Admin successfully!"))
     }
 
@@ -119,6 +143,26 @@ class MasterController(
         }
         
         screenRepository.delete(screen)
+
+        // Notification to Master
+        notificationRepository.save(Notification(
+            message = "Screen '${screen.name}' was deleted.",
+            type = "WARNING",
+            targetRole = "ROLE_MASTER",
+            screenId = id
+        ))
+
+        // Notification to Admin (if it was assigned)
+        if (screen.assignedAdmin != null) {
+            notificationRepository.save(Notification(
+                message = "Screen '${screen.name}' assigned to you has been deleted by Master.",
+                type = "ERROR",
+                targetRole = "ROLE_ADMIN",
+                targetUser = screen.assignedAdmin,
+                screenId = id
+            ))
+        }
+
         return ResponseEntity.ok(mapOf("message" to "Screen deleted successfully"))
     }
 
@@ -138,12 +182,29 @@ class MasterController(
             screenRepository.save(screen)
         }
         
-        // Attempt to delete user. This may fail if they uploaded media.
+        // Remove admin from their campaigns
+        val campaigns = campaignRepository.findAll().filter { it.creator?.id == id }
+        campaigns.forEach { it.creator = null; campaignRepository.save(it) }
+
+        // Remove admin from their playlists
+        val playlists = playlistRepository.findAll().filter { it.creator?.id == id }
+        playlists.forEach { it.creator = null; playlistRepository.save(it) }
+
+        // Remove admin from their media
+        val media = mediaRepository.findAll().filter { it.uploader?.id == id }
+        media.forEach { it.uploader = null; mediaRepository.save(it) }
+
+        // Delete any notifications targeted to this admin
+        val notifications = notificationRepository.findAll().filter { it.targetUser?.id == id }
+        notificationRepository.deleteAll(notifications)
+        
+        // Delete user
         try {
             userRepository.delete(admin)
             return ResponseEntity.ok(mapOf("message" to "Admin deleted successfully"))
         } catch (e: Exception) {
-            return ResponseEntity.badRequest().body(mapOf("error" to "Cannot delete admin because they have uploaded media or have active records. Please clear their data first."))
+            e.printStackTrace()
+            return ResponseEntity.badRequest().body(mapOf("error" to "Failed to delete admin due to an unexpected constraint. Check server logs."))
         }
     }
 }

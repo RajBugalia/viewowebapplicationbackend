@@ -75,4 +75,27 @@ class PlaylistController(
         playlistRepository.delete(playlist)
         return ResponseEntity.ok(mapOf("message" to "Playlist deleted successfully"))
     }
+
+    @PutMapping("/{id}")
+    fun updatePlaylist(@PathVariable id: Long, @RequestBody request: Map<String, String>, principal: Principal): ResponseEntity<*> {
+        val user = userRepository.findByEmail(principal.name).orElse(null)
+            ?: return ResponseEntity.status(401).body(mapOf("error" to "Unauthorized"))
+
+        val playlist = playlistRepository.findById(id).orElse(null)
+            ?: return ResponseEntity.notFound().build<Any>()
+
+        if (playlist.creator?.id != user.id) {
+            return ResponseEntity.status(403).body(mapOf("error" to "Forbidden: Playlist does not belong to you"))
+        }
+
+        val newName = request["name"]
+        if (newName.isNullOrBlank()) {
+            return ResponseEntity.badRequest().body(mapOf("error" to "Name cannot be empty"))
+        }
+
+        playlist.name = newName
+        playlistRepository.save(playlist)
+
+        return ResponseEntity.ok(mapOf("message" to "Playlist updated successfully", "name" to playlist.name))
+    }
 }

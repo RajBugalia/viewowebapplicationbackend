@@ -9,7 +9,7 @@ data class Campaign(
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
     
-    val name: String,
+    var name: String,
     
     val startDate: LocalDateTime,
     

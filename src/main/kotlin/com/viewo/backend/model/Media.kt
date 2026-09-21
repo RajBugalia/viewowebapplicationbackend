@@ -19,5 +19,5 @@ data class Media(
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "uploader_id")
-    val uploader: User
+    var uploader: User? = null
 )
