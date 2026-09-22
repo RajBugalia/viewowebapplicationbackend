@@ -9,14 +9,20 @@ data class User(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
     
-    val name: String,
+    var name: String,
     
     @Column(unique = true, nullable = false)
     val email: String,
     
     @Column(nullable = false)
-    val passwordHash: String,
+    var passwordHash: String,
     
     @Enumerated(EnumType.STRING)
-    val role: Role
+    val role: Role,
+    
+    var theme: String = "light",
+    var timezone: String = "UTC",
+    var notifyAlerts: Boolean = true,
+    var notifyReports: Boolean = true,
+    var notifyUpdates: Boolean = false
 )
