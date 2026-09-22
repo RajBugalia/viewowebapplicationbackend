@@ -59,8 +59,12 @@ class AdminController(
             mapOf(
                 "id" to log.id,
                 "screenName" to log.screen.name,
+                "campaignName" to (log.campaign?.name ?: "Unknown Campaign"),
+                "mediaName" to log.media.name,
                 "mediaUrl" to log.media.publicUrl,
                 "mediaType" to log.media.type,
+                "duration" to (log.duration ?: 0),
+                "status" to (log.status ?: "UNKNOWN"),
                 "playedAt" to log.playedAt.format(DateTimeFormatter.ISO_DATE_TIME)
             )
         }.sortedByDescending { it["playedAt"] as String }

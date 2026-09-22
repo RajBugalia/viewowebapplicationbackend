@@ -17,5 +17,13 @@ data class ProofOfPlayLog(
     @JoinColumn(name = "media_id")
     val media: Media,
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "campaign_id")
+    val campaign: Campaign? = null,
+    
+    val duration: Int? = null,
+    
+    val status: String? = null,
+    
     val playedAt: LocalDateTime
 )

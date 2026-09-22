@@ -168,11 +168,22 @@ class ScreenApiController(
         for (log in logs) {
             val mediaId = (log["mediaId"] as? Number)?.toLong() ?: continue
             val timestampMs = (log["timestamp"] as? Number)?.toLong() ?: continue
+            val durationSeconds = (log["durationSeconds"] as? Number)?.toInt()
+            val status = log["status"] as? String
+            val campaignId = log["campaignId"] as? String
             
             val media = mediaRepository.findById(mediaId).orElse(null) ?: continue
+            val campaign = campaignId?.let { campaignRepository.findById(it).orElse(null) }
             
             val playedAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(timestampMs), ZoneId.systemDefault())
-            entitiesToSave.add(ProofOfPlayLog(screen = screen, media = media, playedAt = playedAt))
+            entitiesToSave.add(ProofOfPlayLog(
+                screen = screen, 
+                media = media, 
+                campaign = campaign,
+                duration = durationSeconds,
+                status = status,
+                playedAt = playedAt
+            ))
         }
 
         proofOfPlayRepository.saveAll(entitiesToSave)
