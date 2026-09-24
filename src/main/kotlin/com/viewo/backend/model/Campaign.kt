@@ -1,7 +1,7 @@
 package com.viewo.backend.model
 
 import jakarta.persistence.*
-import java.time.LocalDateTime
+import java.time.Instant
 
 @Entity
 @Table(name = "campaigns")
@@ -11,13 +11,20 @@ data class Campaign(
     
     var name: String,
     
-    val startDate: LocalDateTime,
+    val startDate: Instant,
     
-    val endDate: LocalDateTime,
+    val endDate: Instant,
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "playlist_id")
-    val playlist: Playlist,
+    var playlist: Playlist? = null,
+    
+    var layoutType: String = "SINGLE", // SINGLE or SPLIT
+    var splitRows: Int = 1,
+    var splitCols: Int = 1,
+    
+    @Column(columnDefinition = "TEXT")
+    var zoneConfigJson: String? = null,
     
     @ManyToMany(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(

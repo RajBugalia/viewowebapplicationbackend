@@ -20,6 +20,7 @@ class UserController(
 
     private fun getCurrentUserEmail(): String {
         val authentication = SecurityContextHolder.getContext().authentication
+            ?: throw IllegalStateException("Unauthenticated")
         val principal = authentication.principal
         return if (principal is UserDetails) {
             principal.username
@@ -76,7 +77,7 @@ class UserController(
             return ResponseEntity.badRequest().body(MessageResponse("Incorrect current password"))
         }
 
-        user.passwordHash = passwordEncoder.encode(request.newPassword)
+        user.passwordHash = passwordEncoder.encode(request.newPassword) ?: ""
         userRepository.save(user)
         
         return ResponseEntity.ok(MessageResponse("Password updated successfully"))

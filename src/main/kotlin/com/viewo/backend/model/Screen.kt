@@ -22,5 +22,7 @@ data class Screen(
     @JoinColumn(name = "assigned_admin_id")
     var assignedAdmin: User? = null,
     
+    var groupName: String? = null,
+    
     var lastPingAt: LocalDateTime? = null
 )

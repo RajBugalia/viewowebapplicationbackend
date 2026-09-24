@@ -6,6 +6,7 @@ import com.viewo.backend.repository.ScreenRepository
 import com.viewo.backend.repository.CampaignRepository
 import com.viewo.backend.repository.MediaRepository
 import com.viewo.backend.repository.ProofOfPlayRepository
+import com.viewo.backend.repository.PlaylistRepository
 import org.springframework.http.ResponseEntity
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.web.bind.annotation.*
@@ -21,6 +22,7 @@ class ScreenApiController(
     private val campaignRepository: CampaignRepository,
     private val mediaRepository: MediaRepository,
     private val proofOfPlayRepository: ProofOfPlayRepository,
+    private val playlistRepository: PlaylistRepository,
     private val jdbcTemplate: JdbcTemplate
 ) {
     data class RegisterRequest(val pairingCode: String, val screenId: Long? = null)
@@ -81,7 +83,7 @@ class ScreenApiController(
     @Transactional
     fun debugCampaigns(): ResponseEntity<*> {
         val campaigns = campaignRepository.findAll()
-        val now = LocalDateTime.now()
+        val now = Instant.now()
         val res = campaigns.map { c ->
             mapOf(
                 "id" to c.id,
@@ -116,7 +118,7 @@ class ScreenApiController(
         }
 
         // Find active campaign for this screen
-        val now = LocalDateTime.now()
+        val now = Instant.now()
         val campaigns = campaignRepository.findAll()
         val activeCampaign = campaigns.firstOrNull { campaign ->
             campaign.targetScreens.any { it.id == screen.id } &&
@@ -128,13 +130,108 @@ class ScreenApiController(
         }
 
         // Construct DTO
-        val campaignDto = mapOf(
+        val campaignDto = buildCampaignDto(activeCampaign)
+
+        return ResponseEntity.ok(mapOf(
+            "status" to "ACTIVE",
+            "activeCampaign" to campaignDto
+        ))
+    }
+
+    @Transactional
+    @GetMapping("/player/{pairingCode}/assignment")
+    fun getPlayerAssignment(@PathVariable pairingCode: String): ResponseEntity<*> {
+        val screen = screenRepository.findByPairingCode(pairingCode).orElse(null)
+            ?: return ResponseEntity.status(404).body(mapOf("error" to "Screen not found"))
+
+        // Update heartbeat
+        screen.lastPingAt = LocalDateTime.now()
+        if (screen.assignedAdmin != null && screen.status == "OFFLINE") {
+            screen.status = "ONLINE"
+        }
+        screenRepository.save(screen)
+
+        val isPaired = screen.assignedAdmin != null
+
+        // Find active campaign for this screen
+        val now = Instant.now()
+        val campaigns = campaignRepository.findAll()
+        val activeCampaign = campaigns.firstOrNull { campaign ->
+            campaign.targetScreens.any { it.id == screen.id } &&
+            now >= campaign.startDate && now <= campaign.endDate
+        }
+
+        if (activeCampaign == null || !isPaired) {
+            return ResponseEntity.ok(mapOf(
+                "isPaired" to isPaired,
+                "campaign" to null,
+                "playlist" to null
+            ))
+        }
+
+        val campaignDto = buildCampaignDto(activeCampaign)
+        val defaultPlaylist = campaignDto["playlist"]
+
+        return ResponseEntity.ok(mapOf(
+            "isPaired" to true,
+            "campaign" to campaignDto,
+            "playlist" to defaultPlaylist
+        ))
+    }
+
+    private fun buildCampaignDto(activeCampaign: com.viewo.backend.model.Campaign): Map<String, Any?> {
+        val campaignDto = mutableMapOf<String, Any?>(
             "id" to activeCampaign.id,
             "name" to activeCampaign.name,
-            "playlist" to mapOf(
-                "id" to activeCampaign.playlist.id,
-                "name" to activeCampaign.playlist.name,
-                "mediaItems" to activeCampaign.playlist.mediaItems.map { media ->
+            "layoutType" to activeCampaign.layoutType,
+            "splitRows" to activeCampaign.splitRows,
+            "splitCols" to activeCampaign.splitCols
+        )
+
+        if (activeCampaign.layoutType == "SPLIT" && !activeCampaign.zoneConfigJson.isNullOrBlank()) {
+            val zonesList = mutableListOf<Map<String, Any?>>()
+            try {
+                val regex = Regex("""\{"zoneIndex":(\d+),"row":(\d+),"col":(\d+),"playlistId":(\d+)\}""")
+                val matches = regex.findAll(activeCampaign.zoneConfigJson!!)
+                for (m in matches) {
+                    val zIdx = m.groupValues[1].toInt()
+                    val r = m.groupValues[2].toInt()
+                    val c = m.groupValues[3].toInt()
+                    val pId = m.groupValues[4].toLong()
+                    val p = playlistRepository.findById(pId).orElse(null)
+                    val pMap = p?.let { pl ->
+                        mapOf(
+                            "id" to pl.id,
+                            "name" to pl.name,
+                            "mediaItems" to pl.mediaItems.map { media ->
+                                mapOf(
+                                    "id" to media.id,
+                                    "publicUrl" to media.publicUrl,
+                                    "type" to media.type,
+                                    "durationSeconds" to media.durationSeconds
+                                )
+                            }
+                        )
+                    }
+                    zonesList.add(mapOf(
+                        "zoneIndex" to zIdx,
+                        "row" to r,
+                        "col" to c,
+                        "playlist" to pMap
+                    ))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            campaignDto["zones"] = zonesList
+            if (zonesList.isNotEmpty() && zonesList[0]["playlist"] != null) {
+                campaignDto["playlist"] = zonesList[0]["playlist"]
+            }
+        } else if (activeCampaign.playlist != null) {
+            campaignDto["playlist"] = mapOf(
+                "id" to activeCampaign.playlist!!.id,
+                "name" to activeCampaign.playlist!!.name,
+                "mediaItems" to activeCampaign.playlist!!.mediaItems.map { media ->
                     mapOf(
                         "id" to media.id,
                         "publicUrl" to media.publicUrl,
@@ -143,12 +240,8 @@ class ScreenApiController(
                     )
                 }
             )
-        )
-
-        return ResponseEntity.ok(mapOf(
-            "status" to "ACTIVE",
-            "activeCampaign" to campaignDto
-        ))
+        }
+        return campaignDto
     }
 
     // 3. Receive Proof of Play logs
@@ -173,7 +266,7 @@ class ScreenApiController(
             val campaignId = log["campaignId"] as? String
             
             val media = mediaRepository.findById(mediaId).orElse(null) ?: continue
-            val campaign = campaignId?.let { campaignRepository.findById(it).orElse(null) }
+            val campaign = campaignId?.toLongOrNull()?.let { campaignRepository.findById(it).orElse(null) }
             
             val playedAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(timestampMs), ZoneId.systemDefault())
             entitiesToSave.add(ProofOfPlayLog(
@@ -220,8 +313,10 @@ class ScreenApiController(
                     location VARCHAR(255) NOT NULL,
                     pairing_code VARCHAR(255) NOT NULL UNIQUE,
                     status VARCHAR(255) NOT NULL,
-                    assigned_admin_id BIGINT REFERENCES users(id)
+                    assigned_admin_id BIGINT REFERENCES users(id),
+                    group_name VARCHAR(255)
                 )""",
+                """ALTER TABLE screens ADD COLUMN IF NOT EXISTS group_name VARCHAR(255)""",
                 """CREATE TABLE IF NOT EXISTS playlists (
                     id BIGSERIAL PRIMARY KEY,
                     name VARCHAR(255) NOT NULL,
@@ -251,8 +346,16 @@ class ScreenApiController(
                     status VARCHAR(255) NOT NULL,
                     created_at TIMESTAMP,
                     creator_id BIGINT REFERENCES users(id),
-                    playlist_id BIGINT REFERENCES playlists(id)
+                    playlist_id BIGINT REFERENCES playlists(id),
+                    layout_type VARCHAR(50) DEFAULT 'SINGLE',
+                    split_rows INT DEFAULT 1,
+                    split_cols INT DEFAULT 1,
+                    zone_config_json TEXT
                 )""",
+                """ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS layout_type VARCHAR(50) DEFAULT 'SINGLE'""",
+                """ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS split_rows INT DEFAULT 1""",
+                """ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS split_cols INT DEFAULT 1""",
+                """ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS zone_config_json TEXT""",
                 """CREATE TABLE IF NOT EXISTS campaign_screens (
                     campaign_id BIGINT NOT NULL REFERENCES campaigns(id),
                     screen_id BIGINT NOT NULL REFERENCES screens(id)

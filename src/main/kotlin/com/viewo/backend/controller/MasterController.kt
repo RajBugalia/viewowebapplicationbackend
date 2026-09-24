@@ -13,7 +13,7 @@ import com.viewo.backend.repository.NotificationRepository
 import com.viewo.backend.repository.PlaylistRepository
 import com.viewo.backend.repository.MediaRepository
 
-data class PairScreenRequest(val pairingCode: String, val adminEmail: String)
+data class PairScreenRequest(val pairingCode: String, val adminEmail: String, val screenName: String? = null)
 
 @RestController
 @RequestMapping("/api/master")
@@ -51,6 +51,7 @@ class MasterController(
                 "name" to it.name,
                 "location" to it.location,
                 "pairingCode" to it.pairingCode,
+                "groupName" to (it.groupName ?: ""),
                 "status" to it.status,
                 "assignedAdmin" to (it.assignedAdmin?.email ?: "Unassigned")
             )
@@ -83,6 +84,9 @@ class MasterController(
         }
         val existingScreen = screens.first()
 
+        if (!request.screenName.isNullOrBlank()) {
+            existingScreen.name = request.screenName.trim()
+        }
         existingScreen.status = "ONLINE"
         existingScreen.assignedAdmin = adminUser
 
@@ -117,7 +121,7 @@ class MasterController(
                 "screenName" to log.screen.name,
                 "adminEmail" to (log.screen.assignedAdmin?.email ?: "Unassigned"),
                 "campaignName" to (log.campaign?.name ?: "Unknown Campaign"),
-                "mediaName" to log.media.name,
+                "mediaName" to log.media.filename,
                 "mediaUrl" to log.media.publicUrl,
                 "mediaType" to log.media.type,
                 "duration" to (log.duration ?: 0),

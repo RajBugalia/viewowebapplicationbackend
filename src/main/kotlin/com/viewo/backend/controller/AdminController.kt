@@ -39,11 +39,78 @@ class AdminController(
                 "id" to screen.id,
                 "name" to screen.name,
                 "location" to screen.location,
+                "groupName" to (screen.groupName ?: ""),
                 "status" to screen.status,
                 "pairingCode" to screen.pairingCode
             )
         }
         return ResponseEntity.ok(response)
+    }
+
+    @GetMapping("/groups")
+    fun getAdminGroups(): ResponseEntity<*> {
+        val authentication = SecurityContextHolder.getContext().authentication
+            ?: return ResponseEntity.status(401).body(mapOf("error" to "Unauthorized"))
+            
+        val userDetails = authentication.principal as UserDetailsImpl
+        val adminId = userDetails.id
+
+        val screens = screenRepository.findByAssignedAdminId(adminId)
+        val groups = screens.mapNotNull { it.groupName }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .map { gName ->
+                mapOf(
+                    "name" to gName,
+                    "screenCount" to screens.count { it.groupName == gName }
+                )
+            }
+        return ResponseEntity.ok(groups)
+    }
+
+    @org.springframework.web.bind.annotation.PutMapping("/screens/{id}/group")
+    fun updateScreenGroup(
+        @org.springframework.web.bind.annotation.PathVariable id: Long, 
+        @org.springframework.web.bind.annotation.RequestBody request: Map<String, String?>
+    ): ResponseEntity<*> {
+        val authentication = SecurityContextHolder.getContext().authentication
+            ?: return ResponseEntity.status(401).body(mapOf("error" to "Unauthorized"))
+            
+        val userDetails = authentication.principal as UserDetailsImpl
+        val adminId = userDetails.id
+
+        val screen = screenRepository.findById(id).orElse(null)
+            ?: return ResponseEntity.notFound().build<Any>()
+
+        if (screen.assignedAdmin?.id != adminId) {
+            return ResponseEntity.status(403).body(mapOf("error" to "Forbidden: Screen does not belong to you"))
+        }
+
+        val rawGroup = request["groupName"]?.trim()
+        screen.groupName = if (rawGroup.isNullOrBlank()) null else rawGroup
+        val saved = screenRepository.save(screen)
+
+        return ResponseEntity.ok(mapOf(
+            "message" to "Screen group updated successfully",
+            "screenId" to saved.id,
+            "groupName" to (saved.groupName ?: "")
+        ))
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/groups/{groupName}")
+    fun deleteGroup(@org.springframework.web.bind.annotation.PathVariable groupName: String): ResponseEntity<*> {
+        val authentication = SecurityContextHolder.getContext().authentication
+            ?: return ResponseEntity.status(401).body(mapOf("error" to "Unauthorized"))
+            
+        val userDetails = authentication.principal as UserDetailsImpl
+        val adminId = userDetails.id
+
+        val screens = screenRepository.findByAssignedAdminId(adminId).filter { it.groupName == groupName }
+        screens.forEach {
+            it.groupName = null
+            screenRepository.save(it)
+        }
+        return ResponseEntity.ok(mapOf("message" to "Group '$groupName' deleted. Screens are now ungrouped."))
     }
 
     @GetMapping("/proof-of-play")
@@ -60,7 +127,7 @@ class AdminController(
                 "id" to log.id,
                 "screenName" to log.screen.name,
                 "campaignName" to (log.campaign?.name ?: "Unknown Campaign"),
-                "mediaName" to log.media.name,
+                "mediaName" to log.media.filename,
                 "mediaUrl" to log.media.publicUrl,
                 "mediaType" to log.media.type,
                 "duration" to (log.duration ?: 0),
@@ -88,23 +155,22 @@ class AdminController(
             return ResponseEntity.status(403).body(mapOf("error" to "Forbidden: Screen does not belong to you"))
         }
         
-        val newName = request["name"]
-        if (newName.isNullOrBlank()) {
-            return ResponseEntity.badRequest().body(mapOf("error" to "Name cannot be empty"))
+        // Disallow editing screen name for admin
+        if (request.containsKey("name")) {
+            return ResponseEntity.status(403).body(mapOf("error" to "Admins are not permitted to change the screen name."))
         }
 
-        screen.name = newName
+        if (request.containsKey("location")) {
+            screen.location = request["location"] ?: screen.location
+        }
+
+        if (request.containsKey("groupName")) {
+            val grp = request["groupName"]?.trim()
+            screen.groupName = if (grp.isNullOrBlank()) null else grp
+        }
+
         screenRepository.save(screen)
 
-        // Notification to Admin
-        notificationRepository.save(Notification(
-            message = "Screen name updated to '${screen.name}'.",
-            type = "INFO",
-            targetRole = "ROLE_ADMIN",
-            targetUser = screen.assignedAdmin,
-            screenId = id
-        ))
-
-        return ResponseEntity.ok(mapOf("message" to "Screen updated successfully", "name" to screen.name))
+        return ResponseEntity.ok(mapOf("message" to "Screen updated successfully", "screenId" to screen.id))
     }
 }

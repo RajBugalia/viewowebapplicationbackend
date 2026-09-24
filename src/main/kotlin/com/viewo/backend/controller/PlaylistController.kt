@@ -67,7 +67,8 @@ class PlaylistController(
         // Delete any campaigns that use this playlist
         val campaigns = campaignRepository.findAll()
         for (campaign in campaigns) {
-            if (campaign.playlist.id == id) {
+            val usesInZone = campaign.zoneConfigJson?.contains("\"playlistId\":$id") == true
+            if (campaign.playlist?.id == id || usesInZone) {
                 campaignRepository.delete(campaign)
             }
         }
