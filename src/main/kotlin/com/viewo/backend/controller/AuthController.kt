@@ -24,17 +24,23 @@ class AuthController(
 
     @PostMapping("/signin")
     fun authenticateUser(@RequestBody loginRequest: LoginRequest): ResponseEntity<*> {
-        val authentication = authenticationManager.authenticate(
-            UsernamePasswordAuthenticationToken(loginRequest.email ?: "", loginRequest.passwordHash ?: "")
-        )
+        try {
+            val authentication = authenticationManager.authenticate(
+                UsernamePasswordAuthenticationToken(loginRequest.email ?: "", loginRequest.passwordHash ?: "")
+            )
 
-        SecurityContextHolder.getContext().authentication = authentication
-        val jwt = jwtUtils.generateJwtToken(authentication)
-        
-        val userDetails = authentication.principal as UserDetailsImpl
-        val role = userDetails.authorities.firstOrNull()?.authority ?: "ROLE_ADMIN"
+            SecurityContextHolder.getContext().authentication = authentication
+            val jwt = jwtUtils.generateJwtToken(authentication)
+            
+            val userDetails = authentication.principal as UserDetailsImpl
+            val role = userDetails.authorities.firstOrNull()?.authority ?: "ROLE_ADMIN"
 
-        return ResponseEntity.ok(JwtResponse(jwt, userDetails.id, userDetails.username, userDetails.name ?: "", role))
+            return ResponseEntity.ok(JwtResponse(jwt, userDetails.id, userDetails.username, userDetails.name ?: "", role))
+        } catch (e: org.springframework.security.core.AuthenticationException) {
+            return ResponseEntity.status(401).body(mapOf("message" to "Invalid email or password"))
+        } catch (e: Exception) {
+            return ResponseEntity.status(500).body(mapOf("message" to (e.message ?: "Authentication error")))
+        }
     }
 
     @PostMapping("/signup")

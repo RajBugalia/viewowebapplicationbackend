@@ -396,8 +396,21 @@ class ScreenApiController(
 
     @GetMapping("/fix-admin")
     fun fixAdmin(): ResponseEntity<*> {
-        jdbcTemplate.execute("UPDATE users SET password_hash = '\$2a\$10\$0iz3XiqKw0uJFfTDtAXNheMbTiNBD9qP.XavXr.xyrGyac194oKeG' WHERE email = 'admin@viewo.com'")
-        return ResponseEntity.ok(mapOf("status" to "success"))
+        val encoder = org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder()
+        val hash = encoder.encode("admin")
+        jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS theme VARCHAR(50) DEFAULT 'light'")
+        jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) DEFAULT 'UTC'")
+        jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_alerts BOOLEAN DEFAULT true")
+        jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_reports BOOLEAN DEFAULT true")
+        jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_updates BOOLEAN DEFAULT false")
+        
+        val count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM users WHERE email = 'admin@viewo.com'", Int::class.java) ?: 0
+        if (count == 0) {
+            jdbcTemplate.execute("INSERT INTO users (email, name, password_hash, role, theme, timezone, notify_alerts, notify_reports, notify_updates) VALUES ('admin@viewo.com', 'Admin User', '$hash', 'ROLE_MASTER', 'light', 'UTC', true, true, false)")
+        } else {
+            jdbcTemplate.execute("UPDATE users SET password_hash = '$hash', role = 'ROLE_MASTER' WHERE email = 'admin@viewo.com'")
+        }
+        return ResponseEntity.ok(mapOf("status" to "success", "message" to "Admin credentials reset to admin@viewo.com / admin"))
     }
 
     @ExceptionHandler(Exception::class)
