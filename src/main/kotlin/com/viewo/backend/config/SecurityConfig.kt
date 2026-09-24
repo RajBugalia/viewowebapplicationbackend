@@ -58,16 +58,7 @@ class SecurityConfig(
                 auth
                     .requestMatchers(
                     "/api/auth/**",
-                    "/api/tv/register",
-                    "/api/tv/*/poll",
-                    "/api/tv/*/proof-of-play",
-                    "/api/tv/init-db",
-                    "/api/tv/debug-db",
-                    "/api/tv/debug-relations",
-                    "/api/tv/debug-campaigns",
-                    "/api/tv/debug-screens",
-                    "/api/tv/hash/**",
-                    "/api/tv/fix-admin",
+                    "/api/tv/**",
                     "/error",
                     "/favicon.ico"
                 ).permitAll()
