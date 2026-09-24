@@ -29,23 +29,46 @@ class DatabaseInitializer(
                 try {
                     jdbcTemplate.execute(sql)
                 } catch (e: Exception) {
-                    println("Migration statement executed with notice: $sql - ${e.message}")
+                    println("Migration statement notice: $sql - ${e.message}")
                 }
             }
             
-            // Ensure default admin exists and has password 'admin'
             val encoder = BCryptPasswordEncoder()
-            val hash = encoder.encode("admin")
-            val count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM users WHERE email = 'admin@viewo.com'", Int::class.java) ?: 0
-            if (count == 0) {
-                jdbcTemplate.execute("INSERT INTO users (email, name, password_hash, role, theme, timezone, notify_alerts, notify_reports, notify_updates) VALUES ('admin@viewo.com', 'Admin User', '$hash', 'ROLE_MASTER', 'light', 'UTC', true, true, false)")
-                println("Created default admin user (admin@viewo.com / admin).")
+            
+            // 1. Seed or update admin@pixl.com (Admin Panel) -> admin123
+            val adminPixlHash = encoder.encode("admin123")
+            val adminPixlCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM users WHERE email = 'admin@pixl.com'", Int::class.java) ?: 0
+            if (adminPixlCount == 0) {
+                jdbcTemplate.execute("INSERT INTO users (email, name, password_hash, role, theme, timezone, notify_alerts, notify_reports, notify_updates) VALUES ('admin@pixl.com', 'Admin PixL', '$adminPixlHash', 'ROLE_ADMIN', 'light', 'UTC', true, true, false)")
+                println("Created admin@pixl.com")
             } else {
-                jdbcTemplate.execute("UPDATE users SET password_hash = '$hash', role = 'ROLE_MASTER' WHERE email = 'admin@viewo.com'")
-                println("Updated default admin user password to 'admin'.")
+                jdbcTemplate.execute("UPDATE users SET password_hash = '$adminPixlHash', role = 'ROLE_ADMIN' WHERE email = 'admin@pixl.com'")
+                println("Updated admin@pixl.com password and role")
             }
+
+            // 2. Seed or update master@pixl.com (Master Panel) -> master123
+            val masterPixlHash = encoder.encode("master123")
+            val masterPixlCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM users WHERE email = 'master@pixl.com'", Int::class.java) ?: 0
+            if (masterPixlCount == 0) {
+                jdbcTemplate.execute("INSERT INTO users (email, name, password_hash, role, theme, timezone, notify_alerts, notify_reports, notify_updates) VALUES ('master@pixl.com', 'Master PixL', '$masterPixlHash', 'ROLE_MASTER', 'light', 'UTC', true, true, false)")
+                println("Created master@pixl.com")
+            } else {
+                jdbcTemplate.execute("UPDATE users SET password_hash = '$masterPixlHash', role = 'ROLE_MASTER' WHERE email = 'master@pixl.com'")
+                println("Updated master@pixl.com password and role")
+            }
+
+            // 3. Keep fallback admin@viewo.com -> admin
+            val viewoHash = encoder.encode("admin")
+            val viewoCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM users WHERE email = 'admin@viewo.com'", Int::class.java) ?: 0
+            if (viewoCount == 0) {
+                jdbcTemplate.execute("INSERT INTO users (email, name, password_hash, role, theme, timezone, notify_alerts, notify_reports, notify_updates) VALUES ('admin@viewo.com', 'Admin User', '$viewoHash', 'ROLE_MASTER', 'light', 'UTC', true, true, false)")
+            } else {
+                jdbcTemplate.execute("UPDATE users SET password_hash = '$viewoHash', role = 'ROLE_MASTER' WHERE email = 'admin@viewo.com'")
+            }
+
+            println("Database initialization and credential seeding completed successfully.")
         } catch (e: Exception) {
-            println("DatabaseInitializer failed: ${e.message}")
+            println("DatabaseInitializer error: ${e.message}")
         }
     }
 }

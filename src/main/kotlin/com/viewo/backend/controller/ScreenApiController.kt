@@ -397,20 +397,43 @@ class ScreenApiController(
     @GetMapping("/fix-admin")
     fun fixAdmin(): ResponseEntity<*> {
         val encoder = org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder()
-        val hash = encoder.encode("admin")
         jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS theme VARCHAR(50) DEFAULT 'light'")
         jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) DEFAULT 'UTC'")
         jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_alerts BOOLEAN DEFAULT true")
         jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_reports BOOLEAN DEFAULT true")
         jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_updates BOOLEAN DEFAULT false")
         
-        val count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM users WHERE email = 'admin@viewo.com'", Int::class.java) ?: 0
-        if (count == 0) {
-            jdbcTemplate.execute("INSERT INTO users (email, name, password_hash, role, theme, timezone, notify_alerts, notify_reports, notify_updates) VALUES ('admin@viewo.com', 'Admin User', '$hash', 'ROLE_MASTER', 'light', 'UTC', true, true, false)")
+        // admin@pixl.com -> admin123
+        val adminHash = encoder.encode("admin123")
+        val adminCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM users WHERE email = 'admin@pixl.com'", Int::class.java) ?: 0
+        if (adminCount == 0) {
+            jdbcTemplate.execute("INSERT INTO users (email, name, password_hash, role, theme, timezone, notify_alerts, notify_reports, notify_updates) VALUES ('admin@pixl.com', 'Admin PixL', '$adminHash', 'ROLE_ADMIN', 'light', 'UTC', true, true, false)")
         } else {
-            jdbcTemplate.execute("UPDATE users SET password_hash = '$hash', role = 'ROLE_MASTER' WHERE email = 'admin@viewo.com'")
+            jdbcTemplate.execute("UPDATE users SET password_hash = '$adminHash', role = 'ROLE_ADMIN' WHERE email = 'admin@pixl.com'")
         }
-        return ResponseEntity.ok(mapOf("status" to "success", "message" to "Admin credentials reset to admin@viewo.com / admin"))
+
+        // master@pixl.com -> master123
+        val masterHash = encoder.encode("master123")
+        val masterCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM users WHERE email = 'master@pixl.com'", Int::class.java) ?: 0
+        if (masterCount == 0) {
+            jdbcTemplate.execute("INSERT INTO users (email, name, password_hash, role, theme, timezone, notify_alerts, notify_reports, notify_updates) VALUES ('master@pixl.com', 'Master PixL', '$masterHash', 'ROLE_MASTER', 'light', 'UTC', true, true, false)")
+        } else {
+            jdbcTemplate.execute("UPDATE users SET password_hash = '$masterHash', role = 'ROLE_MASTER' WHERE email = 'master@pixl.com'")
+        }
+
+        // admin@viewo.com -> admin
+        val viewoHash = encoder.encode("admin")
+        val viewoCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM users WHERE email = 'admin@viewo.com'", Int::class.java) ?: 0
+        if (viewoCount == 0) {
+            jdbcTemplate.execute("INSERT INTO users (email, name, password_hash, role, theme, timezone, notify_alerts, notify_reports, notify_updates) VALUES ('admin@viewo.com', 'Admin User', '$viewoHash', 'ROLE_MASTER', 'light', 'UTC', true, true, false)")
+        } else {
+            jdbcTemplate.execute("UPDATE users SET password_hash = '$viewoHash', role = 'ROLE_MASTER' WHERE email = 'admin@viewo.com'")
+        }
+
+        return ResponseEntity.ok(mapOf(
+            "status" to "success", 
+            "message" to "Credentials updated: admin@pixl.com (admin123), master@pixl.com (master123), admin@viewo.com (admin)"
+        ))
     }
 
     @ExceptionHandler(Exception::class)
