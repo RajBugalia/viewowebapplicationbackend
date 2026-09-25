@@ -9,7 +9,7 @@ data class User(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
     
-    var name: String,
+    var name: String? = "",
     
     @Column(unique = true, nullable = false)
     val email: String,
@@ -20,9 +20,9 @@ data class User(
     @Enumerated(EnumType.STRING)
     val role: Role,
     
-    var theme: String = "light",
-    var timezone: String = "UTC",
-    var notifyAlerts: Boolean = true,
-    var notifyReports: Boolean = true,
-    var notifyUpdates: Boolean = false
+    var theme: String? = "light",
+    var timezone: String? = "UTC",
+    var notifyAlerts: Boolean? = true,
+    var notifyReports: Boolean? = true,
+    var notifyUpdates: Boolean? = false
 )

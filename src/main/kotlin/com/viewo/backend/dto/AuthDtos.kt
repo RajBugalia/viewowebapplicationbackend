@@ -22,11 +22,11 @@ data class UpdatePasswordRequest(
 data class UserProfileResponse(
     val id: Long,
     val email: String,
-    val name: String,
+    val name: String? = "",
     val role: String,
-    val theme: String,
-    val timezone: String,
-    val notifyAlerts: Boolean,
-    val notifyReports: Boolean,
-    val notifyUpdates: Boolean
+    val theme: String? = "light",
+    val timezone: String? = "UTC",
+    val notifyAlerts: Boolean? = true,
+    val notifyReports: Boolean? = true,
+    val notifyUpdates: Boolean? = false
 )

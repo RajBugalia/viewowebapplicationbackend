@@ -39,13 +39,13 @@ class UserController(
             UserProfileResponse(
                 id = user.id,
                 email = user.email,
-                name = user.name,
+                name = user.name ?: "",
                 role = user.role.name,
-                theme = user.theme,
-                timezone = user.timezone,
-                notifyAlerts = user.notifyAlerts,
-                notifyReports = user.notifyReports,
-                notifyUpdates = user.notifyUpdates
+                theme = user.theme ?: "light",
+                timezone = user.timezone ?: "UTC",
+                notifyAlerts = user.notifyAlerts ?: true,
+                notifyReports = user.notifyReports ?: true,
+                notifyUpdates = user.notifyUpdates ?: false
             )
         )
     }
@@ -81,5 +81,16 @@ class UserController(
         userRepository.save(user)
         
         return ResponseEntity.ok(MessageResponse("Password updated successfully"))
+    }
+
+    @ExceptionHandler(Exception::class)
+    fun handleException(e: Exception): ResponseEntity<*> {
+        e.printStackTrace()
+        return ResponseEntity.status(500).body(mapOf(
+            "error" to e.javaClass.simpleName,
+            "message" to e.message,
+            "cause" to e.cause?.message,
+            "stackTrace" to e.stackTraceToString()
+        ))
     }
 }
