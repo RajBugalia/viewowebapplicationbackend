@@ -206,6 +206,8 @@ class ScreenApiController(
                             "mediaItems" to pl.mediaItems.map { media ->
                                 mapOf(
                                     "id" to media.id,
+                                    "name" to media.filename,
+                                    "url" to media.publicUrl,
                                     "publicUrl" to media.publicUrl,
                                     "type" to media.type,
                                     "durationSeconds" to media.durationSeconds
@@ -234,6 +236,8 @@ class ScreenApiController(
                 "mediaItems" to activeCampaign.playlist!!.mediaItems.map { media ->
                     mapOf(
                         "id" to media.id,
+                        "name" to media.filename,
+                        "url" to media.publicUrl,
                         "publicUrl" to media.publicUrl,
                         "type" to media.type,
                         "durationSeconds" to media.durationSeconds
