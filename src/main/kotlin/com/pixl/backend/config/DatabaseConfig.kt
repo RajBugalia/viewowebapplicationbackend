@@ -1,4 +1,4 @@
-﻿package com.pixl.backend.config
+package com.pixl.backend.config
 
 import com.zaxxer.hikari.HikariDataSource
 import org.springframework.beans.factory.annotation.Value
@@ -13,7 +13,7 @@ class DatabaseConfig {
     @Value("\${DATABASE_URL:}")
     lateinit var databaseUrl: String
 
-    @Value("\${local.datasource.url:jdbc:postgresql://localhost:5432/viewo}")
+    @Value("\${local.datasource.url:jdbc:postgresql://localhost:5432/pixl}")
     lateinit var localUrl: String
 
     @Value("\${local.datasource.username:postgres}")

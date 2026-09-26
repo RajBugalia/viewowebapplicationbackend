@@ -1,9 +1,9 @@
-# TestSprite AI Testing Report (MCP) - Backend
+﻿# TestSprite AI Testing Report (MCP) - Backend
 
 ---
 
 ## 1️⃣ Document Metadata
-- **Project Name:** Viewo Web Backend (PixL DOOH Platform)
+- **Project Name:** PixL Web Backend
 - **Target URL:** http://localhost:8765
 - **Date:** 2026-09-26
 - **Prepared by:** TestSprite AI & Antigravity IDE
@@ -99,3 +99,4 @@
    - Media upload limit is set to 500MB via `spring.servlet.multipart.max-file-size`. Large video uploads should be monitored for CDN bandwidth.
 3. **Database Indexing:**
    - With many screens reporting proof-of-play impressions simultaneously, ensure the `proof_of_play_logs` table maintains indexes on `screen_id` and `created_at`.
+
