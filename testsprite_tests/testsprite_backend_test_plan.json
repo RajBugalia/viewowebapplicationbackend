@@ -1,0 +1,52 @@
+[
+  {
+    "id": "TC001",
+    "title": "postapiauthloginwithvalidcredentials",
+    "description": "Test POST /api/auth/login with valid user credentials to verify successful authentication and receipt of a JWT token."
+  },
+  {
+    "id": "TC002",
+    "title": "postapiauthregisterwithvaliddetails",
+    "description": "Test POST /api/auth/register with valid new user details to confirm account creation and appropriate success response."
+  },
+  {
+    "id": "TC003",
+    "title": "getapiusermewithvalidtoken",
+    "description": "Test GET /api/user/me with a valid JWT token to retrieve the authenticated user's profile details successfully."
+  },
+  {
+    "id": "TC004",
+    "title": "putapiuserprofilewithvalidupdates",
+    "description": "Test PUT /api/user/profile with valid profile update fields to confirm successful update of user profile."
+  },
+  {
+    "id": "TC005",
+    "title": "getapiadmincampaignswithadmintoken",
+    "description": "Test GET /api/admin/campaigns with a valid admin JWT token to retrieve the list of campaigns accessible to the admin."
+  },
+  {
+    "id": "TC006",
+    "title": "postapiadmincampaignswithvalidpayload",
+    "description": "Test POST /api/admin/campaigns with valid campaign data to create a new advertising campaign successfully."
+  },
+  {
+    "id": "TC007",
+    "title": "postapitvpairwithvalidpairingcode",
+    "description": "Test POST /api/tv/pair with a valid 6-digit pairing code to pair a hardware screen device and receive device JWT token and screen ID."
+  },
+  {
+    "id": "TC008",
+    "title": "getapitvsyncwithpaireddevice",
+    "description": "Test GET /api/tv/sync with a paired device context to fetch current active campaign, layout mode, zones, and media URLs."
+  },
+  {
+    "id": "TC009",
+    "title": "getapiadminmediawithadmintoken",
+    "description": "Test GET /api/admin/media with a valid admin JWT token to retrieve the list of media files."
+  },
+  {
+    "id": "TC010",
+    "title": "postapiadminplaylistswithvalidpayload",
+    "description": "Test POST /api/admin/playlists with valid playlist name and media references to create a new playlist successfully."
+  }
+]

@@ -1,4 +1,4 @@
-plugins {
+﻿plugins {
 	kotlin("jvm") version "2.3.21"
 	kotlin("plugin.spring") version "2.3.21"
 	id("org.springframework.boot") version "4.1.1"
@@ -6,7 +6,7 @@ plugins {
 	kotlin("plugin.jpa") version "2.3.21"
 }
 
-group = "com.viewo"
+group = "com.pixl"
 version = "0.0.1-SNAPSHOT"
 
 java {
@@ -54,3 +54,4 @@ allOpen {
 tasks.withType<Test> {
 	useJUnitPlatform()
 }
+
