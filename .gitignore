@@ -38,3 +38,5 @@ out/
 
 ### Kotlin ###
 .kotlin
+testsprite_tests/tmp/
+testsprite_tests/tmp/config.json
