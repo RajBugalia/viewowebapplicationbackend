@@ -18,7 +18,7 @@ class UserDetailsImpl(
             val authorities = listOf(SimpleGrantedAuthority(user.role.name))
             return UserDetailsImpl(
                 user.id,
-                user.name,
+                user.name ?: "",
                 user.email,
                 user.passwordHash,
                 authorities
